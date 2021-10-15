@@ -1,0 +1,41 @@
+image: docker:latest
+
+variables:
+  REPOSITORY_URL: genjerdotkom/cicd_sample
+  IMAGE_TAG: latest
+
+services:
+- docker:dind
+
+before_script:
+  - docker login --username=$DH_USERNAME --password=$DH_PASSWORD
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  script:
+    - echo "Building image..."
+    - docker build 
+      -t cicd_sample:latest 
+      --build-arg PORT=$PORT 
+      --no-cache .
+    - echo "Tagging image..."
+    - docker tag cicd_sample:latest $REPOSITORY_URL:latest
+    - echo "Pushing image..."
+    - docker push $REPOSITORY_URL:latest
+  only:
+    - master
+
+deploy:
+  stage: deploy
+  script:
+    - docker stop cicd_sample || true && docker rm cicd_sample || true
+    - docker container run -dt -p $PORT:$PORT --name cicd_sample $REPOSITORY_URL:latest
+    - docker image prune -f
+  only:
+    - master
+
+    
